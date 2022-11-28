@@ -31,8 +31,8 @@
 //! }
 //!
 //! #[fncli::cli]
-//! fn main(time: Time) {
-//!     println!("{} hours, {} minutes", time.hour, time.minute);
+//! fn main(Time { hour, minute }: Time) {
+//!     println!("{} hours, {} minutes", hour, minute);
 //! }
 //!
 //! // $ cargo run 12:34
@@ -47,6 +47,8 @@
 #![warn(missing_docs)]
 #![allow(clippy::needless_doctest_main)]
 
+use std::convert::identity;
+
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
@@ -58,10 +60,9 @@ use syn::{
 /// The `cli` attribute macro.
 #[proc_macro_attribute]
 pub fn cli(attr: TokenStream, item: TokenStream) -> TokenStream {
-    match parse(attr.into(), item.into()) {
-        Ok(stream) => stream.into(),
-        Err(err) => err.to_compile_error().into(),
-    }
+    parse(attr.into(), item.into())
+        .map_or_else(|e| e.to_compile_error(), identity)
+        .into()
 }
 
 fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Error> {
