@@ -1,4 +1,5 @@
 use std::str::FromStr;
+
 struct Time {
     hour: u8,
     minute: u8,
