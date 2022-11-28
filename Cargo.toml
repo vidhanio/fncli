@@ -1,11 +1,11 @@
 [package]
-name = "fcli"
+name = "fncli"
 version = "0.1.0"
 edition = "2021"
 authors = ["Vidhan Bhatt <me@vidhan.io>"]
 description = "An attribute macro to simplify writing simple command line applications."
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/vidhanio/fcli"
+repository = "https://github.com/vidhanio/fncli"
 readme = "README.md"
 keywords = ["command-line", "cli", "macro"]
 categories = ["command-line-interface"]

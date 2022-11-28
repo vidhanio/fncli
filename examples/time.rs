@@ -15,7 +15,7 @@ impl FromStr for Time {
     }
 }
 
-#[fcli::cli]
+#[fncli::cli]
 fn main(time: Time) {
     println!("{} hours, {} minutes", time.hour, time.minute);
 }
