@@ -3,8 +3,12 @@ name = "fcli"
 version = "0.1.0"
 edition = "2021"
 description = "An attribute macro to simplify writing simple command line applications."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/vidhanio/fcli"
+readme = "README.md"
+keywords = ["command-line", "cli", "macro"]
+categories = ["command-line-interface"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 proc-macro = true

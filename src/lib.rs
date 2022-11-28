@@ -144,7 +144,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
+    fn basic() {
         let attr = TokenStream2::new();
         let item = quote! {
             #[argm::main]
