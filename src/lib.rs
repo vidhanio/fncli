@@ -1,9 +1,9 @@
-//! An atribute macro to simplify writing simple command line applications.
+//! An attribute macro to simplify writing simple command line applications.
 //!
 //! # Examples
 //!
 //! ```no_run
-//! #[mainargs::mainargs]
+//! #[fcli::cli]
 //! fn main(a: i32, b: i32) {
 //!     println!("{}", a + b);
 //! }
@@ -14,6 +14,7 @@
 //!
 //! ```no_run
 //! use std::str::FromStr;
+//!
 //! struct Time {
 //!     hour: u8,
 //!     minute: u8,
@@ -29,7 +30,7 @@
 //!     }
 //! }
 //!
-//! #[mainargs::mainargs]
+//! #[fcli::cli]
 //! fn main(time: Time) {
 //!     println!("{} hours, {} minutes", time.hour, time.minute);
 //! }
@@ -54,9 +55,9 @@ use syn::{
     ItemFn, PatType, Signature,
 };
 
-/// The main function attribute macro.
+/// The `cli` attribute macro.
 #[proc_macro_attribute]
-pub fn mainargs(attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn cli(attr: TokenStream, item: TokenStream) -> TokenStream {
     match parse(attr.into(), item.into()) {
         Ok(stream) => stream.into(),
         Err(err) => err.to_compile_error().into(),
