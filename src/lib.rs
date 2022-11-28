@@ -54,6 +54,7 @@ use syn::{
     ItemFn, PatType, Signature,
 };
 
+/// The main function attribute macro.
 #[proc_macro_attribute]
 pub fn mainargs(attr: TokenStream, item: TokenStream) -> TokenStream {
     match parse(attr.into(), item.into()) {
