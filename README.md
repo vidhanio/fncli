@@ -55,6 +55,7 @@ fn main() {
 
         tuple
     };
+
     {
         println!("{}", a + b);
     }
