@@ -7,39 +7,12 @@
 //! fn main(a: i32, b: i32) {
 //!     println!("{}", a + b);
 //! }
-//!
-//! // $ cargo run 1 2
-//! // 3
 //! ```
 //!
-//! ```no_run
-//! use std::str::FromStr;
-//!
-//! struct Time {
-//!     hour: u8,
-//!     minute: u8,
-//! }
-//!
-//! impl FromStr for Time {
-//!     type Err = &'static str;
-//!     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//!         let (hour, minute) = s.split_once(':').ok_or("should have a colon")?;
-//!         let hour = hour.parse().map_err(|_| "invalid hour")?;
-//!         let minute = minute.parse().map_err(|_| "invalid minute")?;
-//!         Ok(Time { hour, minute })
-//!     }
-//! }
-//!
-//! #[fncli::cli]
-//! fn main(Time { hour, minute }: Time) {
-//!     println!("{} hours, {} minutes", hour, minute);
-//! }
-//!
-//! // $ cargo run 12:34
-//! // 12 hours, 34 minutes
-//!
-//! // $ cargo run 12
-//! // failed to parse argument `time`: "should have a colon"
+//! ```bash session
+//! $ cargo run 1 2
+//! 3
+//! ```
 
 #![warn(clippy::nursery)]
 #![warn(clippy::pedantic)]
