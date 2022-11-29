@@ -33,8 +33,6 @@ failed to parse argument `b: i32`: ParseIntError { kind: InvalidDigit }
 
 ## How It Works
 
-Here is the expanded code:
-
 ```rust
 fn main() {
     let (a, b) = {
