@@ -31,9 +31,9 @@ $ cargo run 1 a
 failed to parse argument `b: i32`: ParseIntError { kind: InvalidDigit }
 ```
 
-## How it works
+## How It Works
 
-Let's take a look at the generated code:
+Here is the expanded code:
 
 ```rust
 fn main() {
@@ -63,4 +63,4 @@ fn main() {
 }
 ```
 
-As seen, the generated code is very simple, and not too different from how someone would hand-implement this.
+The generated code is very simple, and not too different from how one would write the code by hand.
