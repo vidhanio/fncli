@@ -26,8 +26,8 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote_spanned;
 use syn::{
-    parse::Parser, parse_macro_input::ParseMacroInput, spanned::Spanned, AttributeArgs, Error,
-    ItemFn, PatType, Signature,
+    parse::Parser, parse_macro_input::ParseMacroInput, punctuated::Punctuated, spanned::Spanned,
+    token::Comma, AttributeArgs, Error, FnArg, ItemFn, PatType, Signature,
 };
 
 /// The `cli` attribute macro.
@@ -68,56 +68,24 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
     } = &sig;
 
     if variadic.is_some() {
-        return Err(Error::new(variadic.span(), "unexpected variadic function"));
+        return Err(Error::new(variadic.span(), "unexpected variadic argument"));
     }
 
     let arg_patterns = inputs.iter().map(|arg| match arg {
-        syn::FnArg::Receiver(_) => {
+        FnArg::Receiver(_) => {
             Error::new(arg.span(), "unexpected `self` argument").to_compile_error()
         }
-        syn::FnArg::Typed(PatType { pat, .. }) => quote_spanned!(pat.span()=> #pat),
+        FnArg::Typed(PatType {
+            attrs,
+            pat,
+            colon_token: _,
+            ty: _,
+        }) => quote_spanned!(pat.span()=> #(#attrs)* #pat),
     });
 
     let tuple = quote_spanned!(inputs.span()=> (#(#arg_patterns),*));
 
-    let args = inputs.iter().map(|arg| match arg {
-        syn::FnArg::Receiver(r) => {
-            Error::new(r.span(), "unexpected `self` argument").to_compile_error()
-        }
-        syn::FnArg::Typed(pt) => {
-            let pat = &pt.pat;
-            let ty = &pt.ty;
-            quote_spanned! {arg.span()=>
-                {
-                    let arg = args.next().expect(
-                        ::std::concat!(
-                            "missing argument",
-                            " ",
-                            "`",
-                            stringify!(#pat),
-                            ":",
-                            " ",
-                            stringify!(#ty),
-                            "`"
-                        )
-                    );
-
-                    <#ty as ::std::str::FromStr>::from_str(&arg).expect(
-                        ::std::concat!(
-                            "failed to parse argument",
-                            " ",
-                            "`",
-                            stringify!(#pat),
-                            ":",
-                            " ",
-                            stringify!(#ty),
-                            "`",
-                        )
-                    )
-                }
-            }
-        }
-    });
+    let args = parse_args(inputs);
 
     let len = inputs.len();
 
@@ -148,6 +116,48 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
             };
 
             #block
+        }
+    })
+}
+
+fn parse_args(inputs: &Punctuated<FnArg, Comma>) -> impl Iterator<Item = TokenStream2> + '_ {
+    inputs.iter().map(|arg| match arg {
+        FnArg::Receiver(r) => Error::new(r.span(), "unexpected `self` argument").to_compile_error(),
+        FnArg::Typed(PatType {
+            attrs: _,
+            pat,
+            colon_token: _,
+            ty,
+        }) => {
+            quote_spanned! {arg.span()=>
+                {
+                    let arg = args.next().expect(
+                        ::std::concat!(
+                            "missing argument",
+                            " ",
+                            "`",
+                            stringify!(#pat),
+                            ":",
+                            " ",
+                            stringify!(#ty),
+                            "`"
+                        )
+                    );
+
+                    <#ty as ::std::str::FromStr>::from_str(&arg).expect(
+                        ::std::concat!(
+                            "failed to parse argument",
+                            " ",
+                            "`",
+                            stringify!(#pat),
+                            ":",
+                            " ",
+                            stringify!(#ty),
+                            "`",
+                        )
+                    )
+                }
+            }
         }
     })
 }
