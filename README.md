@@ -31,7 +31,7 @@ $ cargo run 1 a
 failed to parse argument `b: i32`: ParseIntError { kind: InvalidDigit }
 ```
 
-For a more complete example, see [examples/time_elapsed.rs](examples/time_elapsed.rs).
+For a more complete example, see [the time elapsed example](examples/time_elapsed.rs).
 
 ## How It Works
 
