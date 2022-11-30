@@ -24,10 +24,10 @@ use std::convert::identity;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::quote_spanned;
+use quote::{quote_spanned, ToTokens};
 use syn::{
-    parse::Parser, parse_macro_input::ParseMacroInput, punctuated::Punctuated, spanned::Spanned,
-    token::Comma, AttributeArgs, Error, FnArg, ItemFn, PatType, Signature,
+    parse::Parser, parse_macro_input::ParseMacroInput, spanned::Spanned, AttributeArgs, Error,
+    FnArg, ItemFn, PatType, Signature,
 };
 
 /// The `cli` attribute macro.
@@ -71,45 +71,51 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
         return Err(Error::new(variadic.span(), "unexpected variadic argument"));
     }
 
-    let arg_patterns = inputs.iter().map(|arg| match arg {
-        FnArg::Receiver(_) => {
-            Error::new(arg.span(), "unexpected `self` argument").to_compile_error()
-        }
-        FnArg::Typed(PatType {
-            attrs,
-            pat,
-            colon_token: _,
-            ty: _,
-        }) => quote_spanned!(pat.span()=> #(#attrs)* #pat),
-    });
+    let pat_types = inputs
+        .iter()
+        .map(|arg| match arg {
+            FnArg::Receiver(r) => Err(Error::new(r.span(), "unexpected `self` argument")),
+            FnArg::Typed(p) => Ok(p),
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let tuple = quote_spanned!(inputs.span()=> (#(#arg_patterns),*));
+    let arg_patterns = pat_types.iter().map(
+        |PatType {
+             attrs,
+             pat,
+             colon_token: _,
+             ty: _,
+         }| quote_spanned!(pat.span()=> #(#attrs)* #pat),
+    );
 
-    let args = parse_args(inputs);
+    let pattern_tuple = quote_spanned!(inputs.span()=> (#(#arg_patterns),*));
+    let args = parse_args(&pat_types);
+    let help_message = help(&pat_types);
+    let len_error = format!("too many arguments (expected {})", pat_types.len());
 
-    let len = inputs.len();
-
-    Ok(quote_spanned! {item.span() =>
+    Ok(quote_spanned! {item.span()=>
         #(#attrs)*
         #vis #constness #asyncness #unsafety #abi #fn_token #ident #generics() #output {
             #[allow(clippy::let_unit_value)]
             #[allow(unused_parens)]
-            let #tuple = {
+            let #pattern_tuple = {
                 use ::std::iter::Iterator;
 
-                let mut args = ::std::env::args().skip(1);
+                let mut args = ::std::env::args();
+
+                let cmd = args.next().expect("should have a command name");
+
+                let exit = |err: &str| -> ! {
+                    eprintln!("{}", err);
+                    eprintln!();
+                    eprintln!(#help_message, cmd);
+                    ::std::process::exit(1)
+                };
 
                 let tuple = (#(#args),*);
 
                 if args.next().is_some() {
-                    ::std::panic!(::std::concat!(
-                        "too many arguments",
-                        " ",
-                        "(expected",
-                        " ",
-                        #len,
-                        " arguments)",
-                    ));
+                    exit(#len_error);
                 }
 
                 tuple
@@ -120,45 +126,77 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
     })
 }
 
-fn parse_args(inputs: &Punctuated<FnArg, Comma>) -> impl Iterator<Item = TokenStream2> + '_ {
-    inputs.iter().map(|arg| match arg {
-        FnArg::Receiver(r) => Error::new(r.span(), "unexpected `self` argument").to_compile_error(),
-        FnArg::Typed(PatType {
-            attrs: _,
-            pat,
-            colon_token: _,
-            ty,
-        }) => {
-            quote_spanned! {arg.span()=>
+fn help(pat_types: &[&PatType]) -> String {
+    pat_types.iter().fold(
+        "USAGE:\n    {}".to_owned(),
+        |mut acc,
+         &PatType {
+             attrs: _,
+             pat,
+             colon_token: _,
+             ty,
+         }| {
+            acc.push_str(" <");
+
+            acc.push_str(
+                &pat.to_token_stream()
+                    .to_string()
+                    .replace('{', "{{")
+                    .replace('}', "}}"),
+            );
+
+            acc.push_str(": ");
+
+            acc.push_str(
+                &ty.to_token_stream()
+                    .to_string()
+                    .replace('{', "{{")
+                    .replace('}', "}}"),
+            );
+
+            acc.push('>');
+
+            acc
+        },
+    )
+}
+
+fn parse_args<'a>(inputs: &'a [&PatType]) -> impl Iterator<Item = TokenStream2> + 'a {
+    inputs.iter().map(
+        |p @ PatType {
+             attrs: _,
+             pat,
+             colon_token: _,
+             ty,
+         }| {
+            quote_spanned! {p.span()=>
                 <#ty as ::std::str::FromStr>::from_str(
-                    &args.next().expect(
-                        ::std::concat!(
-                            "missing argument",
-                            " ",
-                            "`",
+                    &args.next().unwrap_or_else(
+                        || exit(::std::concat!(
+                            "missing argument: `",
                             stringify!(#pat),
-                            ":",
-                            " ",
+                            ": ",
                             stringify!(#ty),
-                            "`"
-                        )
+                            "`",
+                        ))
                     )
                 )
-                .expect(
-                    ::std::concat!(
-                        "failed to parse argument",
-                        " ",
-                        "`",
-                        stringify!(#pat),
-                        ":",
-                        " ",
-                        stringify!(#ty),
-                        "`",
-                    )
+                .unwrap_or_else(
+                    |e| exit(&format!(
+                            "{} ({:?})",
+                            ::std::concat!(
+                                "failed to parse argument: `",
+                                stringify!(#pat),
+                                ": ",
+                                stringify!(#ty),
+                                "`",
+                            ),
+                            e,
+                        ))
                 )
             }
-        }
-    })
+        },
+    )
 }
 
 #[cfg(test)]

@@ -11,24 +11,33 @@ fn main(a: i32, b: i32) {
 }
 ```
 
-```bash session
+```rust
 $ cargo run 1 2
 3
 ```
 
-```bash session
+```rust
 $ cargo run 1
-missing argument `b: i32`
+missing argument: `b: i32`
+
+USAGE:
+    target/debug/examples/add <a: i32> <b: i32>
 ```
 
-```bash session
+```rust
 $ cargo run 1 2 3
-too many arguments (expected 2 arguments)
+too many arguments (expected 2)
+
+USAGE:
+    target/debug/examples/add <a: i32> <b: i32>
 ```
 
-```bash session
+```rust
 $ cargo run 1 a
-failed to parse argument `b: i32`: ParseIntError { kind: InvalidDigit }
+failed to parse argument: `b: i32` (ParseIntError { kind: InvalidDigit })
+
+USAGE:
+    target/debug/examples/add <a: i32> <b: i32>
 ```
 
 For a more complete example, see [the time elapsed example](examples/time_elapsed.rs).
@@ -38,17 +47,34 @@ For a more complete example, see [the time elapsed example](examples/time_elapse
 ```rust
 fn main() {
     let (a, b) = {
-        let mut args = std::env::args().skip(1);
+        let mut args = std::env::args();
+
+        let cmd = args.next().expect("should have a command name");
+
+        let exit = |err: &str| -> ! {
+            eprintln!("{err}");
+            eprintln!();
+            eprintln!("USAGE:\n    {cmd} <a: i32> <b: i32>");
+            std::process::exit(1)
+        };
 
         let tuple = (
-            i32::from_str(&args.next().expect("missing argument `a: i32`"))
-                .expect("failed to parse argument `a: i32`"),
-            i32::from_str(&args.next().expect("missing argument `a: i32`"))
-                .expect("failed to parse argument `b: i32`"),
+            i32::from_str(
+                &args
+                    .next()
+                    .unwrap_or_else(|| exit("missing argument: `a: i32`")),
+            )
+            .unwrap_or_else(|e| exit(&format!("failed to parse argument `a: i32` ({e:?})"))),
+            i32::from_str(
+                &args
+                    .next()
+                    .unwrap_or_else(|| exit("missing argument: `b: i32`")),
+            )
+            .unwrap_or_else(|e| exit(&format!("failed to parse argument `b: i32` ({e:?})"))),
         );
 
         if args.next().is_some() {
-            panic!("too many arguments (expected 2 arguments)");
+            exit("too many arguments (expected 2)");
         }
 
         tuple
