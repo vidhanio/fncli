@@ -41,14 +41,10 @@ fn main() {
         let mut args = std::env::args().skip(1);
 
         let tuple = (
-            {
-                let arg = args.next().expect("missing argument `a: i32`");
-                i32::from_str(&arg).expect("failed to parse argument `a: i32`")
-            },
-            {
-                let arg = args.next().expect("missing argument `b: i32`");
-                i32::from_str(&arg).expect("failed to parse argument `b: i32`")
-            },
+            i32::from_str(&args.next().expect("missing argument `a: i32`"))
+                .expect("failed to parse argument `a: i32`"),
+            i32::from_str(&args.next().expect("missing argument `a: i32`"))
+                .expect("failed to parse argument `b: i32`"),
         );
 
         if args.next().is_some() {
