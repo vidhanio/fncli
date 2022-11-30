@@ -26,8 +26,8 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote_spanned, ToTokens};
 use syn::{
-    parse::Parser, parse_macro_input::ParseMacroInput, spanned::Spanned, AttributeArgs, Error,
-    FnArg, ItemFn, PatType, Signature,
+    parse::Parser, parse_macro_input::ParseMacroInput, punctuated::Punctuated, spanned::Spanned,
+    token::Comma, AttributeArgs, Error, FnArg, ItemFn, PatType, Signature,
 };
 
 /// The `cli` attribute macro.
@@ -71,34 +71,23 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
         return Err(Error::new(variadic.span(), "unexpected variadic argument"));
     }
 
-    let pat_types = inputs
+    let pattern_iter = pattern_iter(inputs)?;
+
+    let arg_patterns = pattern_iter
         .iter()
-        .map(|arg| match arg {
-            FnArg::Receiver(r) => Err(Error::new(r.span(), "unexpected `self` argument")),
-            FnArg::Typed(p) => Ok(p),
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+        .map(|PatType { pat, .. }| quote_spanned!(pat.span()=> #pat));
 
-    let arg_patterns = pat_types.iter().map(
-        |PatType {
-             attrs,
-             pat,
-             colon_token: _,
-             ty: _,
-         }| quote_spanned!(pat.span()=> #(#attrs)* #pat),
-    );
-
-    let pattern_tuple = quote_spanned!(inputs.span()=> (#(#arg_patterns),*));
-    let args = parse_args(&pat_types);
-    let help_message = help(&pat_types);
-    let len_error = format!("too many arguments (expected {})", pat_types.len());
+    let patterns = quote_spanned!(inputs.span()=> (#(#arg_patterns),*));
+    let args = arg_parsers(&pattern_iter);
+    let help_fmt = help_message(&pattern_iter);
+    let len_msg = format!("too many arguments (expected {})", pattern_iter.len());
 
     Ok(quote_spanned! {item.span()=>
         #(#attrs)*
         #vis #constness #asyncness #unsafety #abi #fn_token #ident #generics() #output {
             #[allow(clippy::let_unit_value)]
             #[allow(unused_parens)]
-            let #pattern_tuple = {
+            let #patterns = {
                 use ::std::iter::Iterator;
 
                 let mut args = ::std::env::args();
@@ -108,14 +97,14 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
                 let exit = |err: &str| -> ! {
                     eprintln!("{}", err);
                     eprintln!();
-                    eprintln!(#help_message, cmd);
+                    eprintln!(#help_fmt, cmd);
                     ::std::process::exit(1)
                 };
 
                 let tuple = (#(#args),*);
 
                 if args.next().is_some() {
-                    exit(#len_error);
+                    exit(#len_msg);
                 }
 
                 tuple
@@ -126,26 +115,7 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
     })
 }
 
-fn help(pat_types: &[&PatType]) -> String {
-    "USAGE:\n    {}".to_owned()
-        + &pat_types
-            .iter()
-            .map(
-                |&PatType {
-                     attrs: _,
-                     pat,
-                     colon_token: _,
-                     ty,
-                 }| {
-                    format!(" <{}: {}>", pat.to_token_stream(), ty.to_token_stream())
-                        .replace('{', "{{")
-                        .replace('}', "}}")
-                },
-            )
-            .collect::<String>()
-}
-
-fn parse_args<'a>(inputs: &'a [&PatType]) -> impl Iterator<Item = TokenStream2> + 'a {
+fn arg_parsers<'a>(inputs: &'a [&PatType]) -> impl Iterator<Item = TokenStream2> + 'a {
     inputs.iter().map(
         |p @ PatType {
              attrs: _,
@@ -181,6 +151,42 @@ fn parse_args<'a>(inputs: &'a [&PatType]) -> impl Iterator<Item = TokenStream2> 
             }
         },
     )
+}
+
+fn pattern_iter(inputs: &Punctuated<FnArg, Comma>) -> Result<Vec<&PatType>, Error> {
+    let pattern_iter = inputs
+        .iter()
+        .map(|arg| match arg {
+            FnArg::Receiver(r) => Err(Error::new(r.span(), "unexpected `self` argument")),
+            FnArg::Typed(p @ PatType { attrs, .. }) => {
+                if !attrs.is_empty() {
+                    return Err(Error::new(attrs[0].span(), "unexpected attribute"));
+                }
+
+                Ok(p)
+            }
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(pattern_iter)
+}
+
+fn help_message(pat_types: &[&PatType]) -> String {
+    "USAGE:\n    {}".to_owned()
+        + &pat_types
+            .iter()
+            .map(
+                |&PatType {
+                     attrs: _,
+                     pat,
+                     colon_token: _,
+                     ty,
+                 }| {
+                    format!(" <{}: {}>", pat.to_token_stream(), ty.to_token_stream())
+                        .replace('{', "{{")
+                        .replace('}', "}}")
+                },
+            )
+            .collect::<String>()
 }
 
 #[cfg(test)]
