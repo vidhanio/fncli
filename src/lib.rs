@@ -127,38 +127,22 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
 }
 
 fn help(pat_types: &[&PatType]) -> String {
-    pat_types.iter().fold(
-        "USAGE:\n    {}".to_owned(),
-        |mut acc,
-         &PatType {
-             attrs: _,
-             pat,
-             colon_token: _,
-             ty,
-         }| {
-            acc.push_str(" <");
-
-            acc.push_str(
-                &pat.to_token_stream()
-                    .to_string()
-                    .replace('{', "{{")
-                    .replace('}', "}}"),
-            );
-
-            acc.push_str(": ");
-
-            acc.push_str(
-                &ty.to_token_stream()
-                    .to_string()
-                    .replace('{', "{{")
-                    .replace('}', "}}"),
-            );
-
-            acc.push('>');
-
-            acc
-        },
-    )
+    "USAGE:\n    {}".to_owned()
+        + &pat_types
+            .iter()
+            .map(
+                |&PatType {
+                     attrs: _,
+                     pat,
+                     colon_token: _,
+                     ty,
+                 }| {
+                    format!(" <{}: {}>", pat.to_token_stream(), ty.to_token_stream())
+                        .replace('{', "{{")
+                        .replace('}', "}}")
+                },
+            )
+            .collect::<String>()
 }
 
 fn parse_args<'a>(inputs: &'a [&PatType]) -> impl Iterator<Item = TokenStream2> + 'a {
