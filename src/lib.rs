@@ -130,8 +130,8 @@ fn parse_args(inputs: &Punctuated<FnArg, Comma>) -> impl Iterator<Item = TokenSt
             ty,
         }) => {
             quote_spanned! {arg.span()=>
-                {
-                    let arg = args.next().expect(
+                <#ty as ::std::str::FromStr>::from_str(
+                    &args.next().expect(
                         ::std::concat!(
                             "missing argument",
                             " ",
@@ -142,21 +142,20 @@ fn parse_args(inputs: &Punctuated<FnArg, Comma>) -> impl Iterator<Item = TokenSt
                             stringify!(#ty),
                             "`"
                         )
-                    );
-
-                    <#ty as ::std::str::FromStr>::from_str(&arg).expect(
-                        ::std::concat!(
-                            "failed to parse argument",
-                            " ",
-                            "`",
-                            stringify!(#pat),
-                            ":",
-                            " ",
-                            stringify!(#ty),
-                            "`",
-                        )
                     )
-                }
+                )
+                .expect(
+                    ::std::concat!(
+                        "failed to parse argument",
+                        " ",
+                        "`",
+                        stringify!(#pat),
+                        ":",
+                        " ",
+                        stringify!(#ty),
+                        "`",
+                    )
+                )
             }
         }
     })
