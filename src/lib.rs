@@ -24,7 +24,7 @@ use std::convert::identity;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote_spanned, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     parse::Parser, parse_macro_input::ParseMacroInput, punctuated::Punctuated, spanned::Spanned,
     token::Comma, AttributeArgs, Error, FnArg, ItemFn, PatType, Signature,
@@ -123,7 +123,7 @@ fn arg_parsers<'a>(inputs: &'a [&PatType]) -> impl Iterator<Item = TokenStream2>
              colon_token: _,
              ty,
          }| {
-            quote_spanned! {p.span()=>
+            quote! {
                 <#ty as ::std::str::FromStr>::from_str(
                     &args.next().unwrap_or_else(
                         || exit(::std::concat!(
