@@ -117,7 +117,7 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
 
 fn arg_parsers<'a>(inputs: &'a [&PatType]) -> impl Iterator<Item = TokenStream2> + 'a {
     inputs.iter().map(
-        |p @ PatType {
+        |PatType {
              attrs: _,
              pat,
              colon_token: _,
