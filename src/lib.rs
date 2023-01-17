@@ -88,7 +88,7 @@ fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Er
             #[allow(clippy::let_unit_value)]
             #[allow(unused_parens)]
             let #patterns = {
-                use ::std::iter::Iterator;
+                use ::std::iter::Iterator as _;
 
                 let mut args = ::std::env::args();
 
