@@ -170,7 +170,7 @@ fn pattern_iter(inputs: &Punctuated<FnArg, Comma>) -> Result<Vec<&PatType>, Erro
 }
 
 fn help_message(pat_types: &[&PatType]) -> String {
-    "USAGE:\n    {}".to_owned()
+    "USAGE:\n\t{}".to_owned()
         + &pat_types
             .iter()
             .map(
