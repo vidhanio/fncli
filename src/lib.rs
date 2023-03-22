@@ -26,24 +26,23 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, quote_spanned, ToTokens};
 use syn::{
-    parse::Parser, parse_macro_input::ParseMacroInput, punctuated::Punctuated, spanned::Spanned,
-    token::Comma, AttributeArgs, Error, FnArg, ItemFn, PatType, Signature,
+    punctuated::Punctuated, spanned::Spanned, token::Comma, Error, FnArg, ItemFn, PatType,
+    Signature,
 };
 
 /// The `cli` attribute macro.
 #[proc_macro_attribute]
 pub fn cli(attr: TokenStream, item: TokenStream) -> TokenStream {
-    parse(attr.into(), item.into())
+    parse(&attr.into(), item.into())
         .map_or_else(|e| e.to_compile_error(), identity)
         .into()
 }
 
-fn parse(attr: TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Error> {
-    let attr = AttributeArgs::parse.parse2(attr)?;
-    let item = ItemFn::parse.parse2(item)?;
+fn parse(attr: &TokenStream2, item: TokenStream2) -> Result<TokenStream2, syn::Error> {
+    let item = syn::parse2::<ItemFn>(item)?;
 
     if !attr.is_empty() {
-        return Err(Error::new(attr[0].span(), "unexpected attribute argument"));
+        return Err(Error::new(attr.span(), "unexpected attribute argument(s)"));
     }
 
     let ItemFn {
@@ -137,7 +136,7 @@ fn arg_parsers<'a>(inputs: &'a [&PatType]) -> impl Iterator<Item = TokenStream2>
                 )
                 .unwrap_or_else(
                     |e| exit(&format!(
-                            "{} ({:?})",
+                            "{}: {:?}",
                             ::std::concat!(
                                 "failed to parse argument: `",
                                 stringify!(#pat),
@@ -205,6 +204,6 @@ mod tests {
             }
         };
 
-        assert!(parse(attr, item).is_ok());
+        assert!(parse(&attr, item).is_ok());
     }
 }
