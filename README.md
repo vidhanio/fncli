@@ -34,7 +34,7 @@ USAGE:
 
 ```rust
 $ cargo run 1 a
-failed to parse argument: `b: i32` (ParseIntError { kind: InvalidDigit })
+failed to parse argument: `b: i32`: ParseIntError { kind: InvalidDigit }
 
 USAGE:
     target/debug/examples/add <a: i32> <b: i32>
@@ -54,7 +54,7 @@ fn main() {
         let exit = |err: &str| -> ! {
             eprintln!("{err}");
             eprintln!();
-            eprintln!("USAGE:\n    {cmd} <a: i32> <b: i32>");
+            eprintln!("USAGE:\n\t{cmd} <a: i32> <b: i32>");
             std::process::exit(1)
         };
 
